@@ -1,0 +1,124 @@
+﻿<SyntaxDefinition name="C#-VisualStudio"
+                 extensions=".cs"
+                 xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+
+	<!-- Visual Studio standard color palette -->
+	<Color name="Comment" foreground="#008000" exampleText="// comment"/>
+	<Color name="String" foreground="#A31515" exampleText="string s = &quot;Hello&quot;"/>
+	<Color name="Char" foreground="#A31515" exampleText="char c = 'a';"/>
+	<Color name="Preprocessor" foreground="#0000FF" exampleText="#region"/>
+	<Color name="Punctuation" foreground="#000000" exampleText=". , ; () {} []"/>
+	<Color name="Number" foreground="#098658" exampleText="123 3.14 0xFF"/>
+	<Color name="Keyword" foreground="#0000FF" exampleText="if else for while"/>
+	<Color name="TypeKeyword" foreground="#0000FF" exampleText="int bool void"/>
+	<Color name="ValueTypeKeyword" foreground="#0000FF" exampleText="struct enum"/>
+	<Color name="ReferenceType" foreground="#2B91AF" exampleText="class interface"/>
+	<Color name="InterfaceType" foreground="#2B91AF" exampleText="IDisposable"/>
+	<Color name="ValueType" foreground="#2B91AF" exampleText="DateTime"/>
+	<Color name="MethodCall" foreground="#795E26" exampleText="ToString()"/>
+	<Color name="Property" foreground="#FF0000" exampleText="Length"/>
+	<Color name="Attribute" foreground="#FF0000" exampleText="[Obsolete]"/>
+	<Color name="LinqKeyword" foreground="#0000FF" exampleText="from where select"/>
+	<Color name="XmlDocTag" foreground="#008000" exampleText="/// &lt;summary&gt;"/>
+
+	<RuleSet>
+		<!-- Comments -->
+		<Span color="Comment" multiline="true">
+			<Begin>/\*</Begin>
+			<End>\*/</End>
+		</Span>
+		<Span color="Comment" stopEOL="true">
+			<Begin>//</Begin>
+		</Span>
+		<Span color="XmlDocTag" multiline="true">
+			<Begin>///</Begin>
+			<End>$</End>
+		</Span>
+
+		<!-- Strings and chars -->
+		<Span color="String" multiline="true">
+			<Begin>"</Begin>
+			<End>"</End>
+			<RuleSet>
+				<Span color="String">
+					<Begin>\\</Begin>
+					<End>.</End>
+				</Span>
+			</RuleSet>
+		</Span>
+		<Span color="Char">
+			<Begin>'</Begin>
+			<End>'</End>
+			<RuleSet>
+				<Span color="Char">
+					<Begin>\\</Begin>
+					<End>.</End>
+				</Span>
+			</RuleSet>
+		</Span>
+		<Span color="String">
+			<Begin>\$@"</Begin>
+			<End>"</End>
+		</Span>
+
+		<!-- Preprocessor -->
+		<Span color="Preprocessor" stopEOL="true">
+			<Begin>^\s*#</Begin>
+		</Span>
+
+		<!-- Attributes -->
+		<Span color="Attribute">
+			<Begin>\[</Begin>
+			<End>\]</End>
+		</Span>
+
+		<!-- Keywords -->
+		<Keywords color="Keyword">
+			abstract as base break case catch checked continue default
+			do else event explicit extern false finally fixed for foreach goto
+			if implicit in lock namespace new null operator out override
+			params private protected public readonly ref return sealed sizeof
+			stackalloc switch this throw true try typeof unchecked unsafe using
+			virtual while
+		</Keywords>
+
+		<Keywords color="TypeKeyword">
+			bool byte char decimal double float int long object
+			sbyte short string uint ulong ushort void dynamic
+		</Keywords>
+
+		<Keywords color="ValueTypeKeyword">
+			struct enum
+		</Keywords>
+
+		<Keywords color="LinqKeyword">
+			from where select group into orderby join let on equals by ascending descending
+		</Keywords>
+
+		<!-- Types -->
+		<Rule color="ReferenceType">
+			\b(class|interface)\s+([a-zA-Z_]\w*)\b
+		</Rule>
+		<Rule color="ValueType">
+			\b(struct|enum)\s+([a-zA-Z_]\w*)\b
+		</Rule>
+		<Rule color="InterfaceType">
+			\bI[A-Z][a-zA-Z0-9_]*\b
+		</Rule>
+
+		<!-- Method calls -->
+		<Rule color="MethodCall">
+			\b[a-zA-Z_]\w*(?=\s*\()
+		</Rule>
+
+		<!-- Properties -->
+		<Rule color="Property">
+			\b[a-zA-Z_]\w*(?=\s*\{)
+		</Rule>
+
+		<!-- Numbers -->
+		<Rule color="Number">
+			\b0[xX][0-9a-fA-F]+|(\b\d+(\.[0-9]+)?|\.[0-9]+)([eE][+-]?[0-9]+)?[fFdD]?\b
+		</Rule>
+	</RuleSet>
+</SyntaxDefinition>

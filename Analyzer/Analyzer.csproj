@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Images\file.png" />
+    <None Remove="Images\folder.png" />
+    <None Remove="Images\home.png" />
+    <None Remove="Images\methods.png" />
+    <None Remove="Images\patterns.png" />
+    <None Remove="Images\project.png" />
+    <None Remove="Images\structure.png" />
+    <None Remove="Resources\CSharp-Dark.xshd" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+    <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.13.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.13.0" />
+    <PackageReference Include="PresentationFramework" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\file.png" />
+    <Resource Include="Images\folder.png" />
+    <Resource Include="Images\home.png" />
+    <Resource Include="Images\infograph.png" />
+    <Resource Include="Images\methods.png" />
+    <Resource Include="Images\patterns.png" />
+    <Resource Include="Images\project.png" />
+    <Resource Include="Images\structure.png" />
+    <Resource Include="Resources\CSharp-Dark.xshd" />
+  </ItemGroup>
+
+</Project>
