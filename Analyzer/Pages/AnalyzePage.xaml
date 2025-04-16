@@ -36,16 +36,9 @@
 
             <RadioButton Style="{StaticResource MenuRadioButton}" 
              Tag="Images/methods.png" 
-             Content="Методы" 
+             Content="Метрики" 
              GroupName="MenuGroup" 
-             Name="MethodsButton"
-                         Click="RadioButton_Checked"/>
-
-            <RadioButton Style="{StaticResource MenuRadioButton}" 
-             Tag="Images/infograph.png" 
-             Content="Инфографика" 
-             GroupName="MenuGroup" 
-             Name="InfographButton"
+             Name="MetricsButton"
                          Click="RadioButton_Checked"/>
 
             <RadioButton Style="{StaticResource MenuRadioButton}" 

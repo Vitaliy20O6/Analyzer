@@ -1,4 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Microsoft.Build.Locator;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.MSBuild;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -24,10 +27,13 @@ namespace Analyzer.src
         }
     }
 
+
     public class SolutionLoader
     {
         public ObservableCollection<TreeViewNode> RootNodes { get; } = new ObservableCollection<TreeViewNode>();
         private readonly string _solutionPath;
+
+        public MetricsResult Metrics { get; private set; } = new();
 
         public SolutionLoader(string solutionPath)
         {
@@ -64,6 +70,212 @@ namespace Analyzer.src
                 MessageBox.Show($"Error loading solution: {ex.Message}");
             }
         }
+        public async Task AnalyzeMetrics()
+        {
+            Metrics = new MetricsResult();
+
+            await Task.Run(async () =>
+            {
+                using var workspace = MSBuildWorkspace.Create();
+                var solution = await workspace.OpenSolutionAsync(_solutionPath);
+
+                foreach (var project in solution.Projects)
+                {
+                    var compilation = await project.GetCompilationAsync();
+                    foreach (var document in project.Documents)
+                    {
+                        if (!document.FilePath.EndsWith(".cs") || document.FilePath.Contains("\\obj\\")) continue;
+
+                        var tree = await document.GetSyntaxTreeAsync();
+                        var root = await tree.GetRootAsync();
+                        var model = compilation.GetSemanticModel(tree);
+
+                        foreach (var cls in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+                        {
+                            foreach (var method in cls.DescendantNodes().OfType<MethodDeclarationSyntax>())
+                            {
+                                var symbol = model.GetDeclaredSymbol(method);
+                                var lines = CountLogicalLines(method);
+                                var complexity = GetCyclomaticComplexity(method);
+                                var halstead = CalculateHalstead(method);
+                                var mi = CalculateMaintainabilityIndex(halstead.Volume, complexity, lines);
+                                var fanOut = CountFanOut(method, model);
+                                var fanIn = CountFanIn(solution, symbol);
+                                var npath = CalculateNPathComplexity(method);
+                                var nesting = GetMaxNestingDepth(method.Body);
+
+                                Metrics.Methods.Add(new MethodMetrics
+                                {
+                                    FilePath = document.FilePath,
+                                    ClassName = cls.Identifier.Text,
+                                    MethodName = method.Identifier.Text,
+                                    LogicalLines = lines,
+                                    CyclomaticComplexity = complexity,
+                                    HalsteadVolume = halstead.Volume,
+                                    OperatorCount = halstead.OperatorCount,
+                                    OperandCount = halstead.OperandCount,
+                                    MaintainabilityIndex = mi,
+                                    ParameterCount = method.ParameterList.Parameters.Count,
+                                    LocalVariableCount = method.DescendantNodes().OfType<LocalDeclarationStatementSyntax>().Count(),
+                                    FanIn = fanIn,
+                                    FanOut = fanOut,
+                                    NPathComplexity = npath,
+                                    MaxNestingDepth = nesting
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        #region MetricsMetods
+        static private int CountLogicalLines(MethodDeclarationSyntax method)
+        {
+            return method.Body?.Statements.Count ?? 0;
+        }
+
+        static private int GetCyclomaticComplexity(MethodDeclarationSyntax method)
+        {
+            int count = 1;
+            count += method.DescendantNodes().Count(n =>
+                n is IfStatementSyntax ||
+                n is ForStatementSyntax ||
+                n is WhileStatementSyntax ||
+                n is DoStatementSyntax ||
+                n is CaseSwitchLabelSyntax ||
+                n is ConditionalExpressionSyntax ||
+                (n is BinaryExpressionSyntax bin && (bin.IsKind(SyntaxKind.LogicalAndExpression) || bin.IsKind(SyntaxKind.LogicalOrExpression))));
+            return count;
+        }
+
+        static private (int OperatorCount, int OperandCount, double Volume) CalculateHalstead(MethodDeclarationSyntax method)
+        {
+            var uniqueOperators = new HashSet<string>();
+            var uniqueOperands = new HashSet<string>();
+            int totalOperators = 0;
+            int totalOperands = 0;
+
+            foreach (var node in method.DescendantNodes())
+            {
+                if (node is BinaryExpressionSyntax binary)
+                {
+                    uniqueOperators.Add(binary.OperatorToken.Text);
+                    totalOperators++;
+                    uniqueOperands.Add(binary.Left.ToString());
+                    uniqueOperands.Add(binary.Right.ToString());
+                    totalOperands += 2;
+                }
+                else if (node is AssignmentExpressionSyntax assign)
+                {
+                    uniqueOperators.Add(assign.OperatorToken.Text);
+                    totalOperators++;
+                    uniqueOperands.Add(assign.Left.ToString());
+                    uniqueOperands.Add(assign.Right.ToString());
+                    totalOperands += 2;
+                }
+                else if (node is PrefixUnaryExpressionSyntax prefix)
+                {
+                    uniqueOperators.Add(prefix.OperatorToken.Text);
+                    totalOperators++;
+                    uniqueOperands.Add(prefix.Operand.ToString());
+                    totalOperands++;
+                }
+                else if (node is PostfixUnaryExpressionSyntax postfix)
+                {
+                    uniqueOperators.Add(postfix.OperatorToken.Text);
+                    totalOperators++;
+                    uniqueOperands.Add(postfix.Operand.ToString());
+                    totalOperands++;
+                }
+                else if (node is InvocationExpressionSyntax invocation)
+                {
+                    uniqueOperators.Add("call");
+                    totalOperators++;
+                    foreach (var arg in invocation.ArgumentList.Arguments)
+                    {
+                        uniqueOperands.Add(arg.ToString());
+                        totalOperands++;
+                    }
+                }
+                else if (node is LiteralExpressionSyntax literal)
+                {
+                    uniqueOperands.Add(literal.ToString());
+                    totalOperands++;
+                }
+            }
+
+            int n1 = uniqueOperators.Count;
+            int n2 = uniqueOperands.Count;
+            int N = totalOperators + totalOperands;
+            int n = n1 + n2;
+            double volume = (n > 0 && N > 0) ? N * Math.Log(n, 2) : 0;
+
+            return (totalOperators, totalOperands, volume);
+        }
+
+        static private double CalculateMaintainabilityIndex(double volume, int complexity, int lines)
+        {
+            if (volume <= 0 || lines <= 0) return 0;
+            return Math.Max(0, (171 - 5.2 * Math.Log(volume) - 0.23 * complexity - 16.2 * Math.Log(lines)) * 100 / 171);
+        }
+
+        static private int CountFanOut(MethodDeclarationSyntax method, SemanticModel model)
+        {
+            return method.DescendantNodes().OfType<InvocationExpressionSyntax>()
+                .Select(inv => model.GetSymbolInfo(inv).Symbol?.ToDisplayString())
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct()
+                .Count();
+        }
+
+        static private int CountFanIn(Solution solution, IMethodSymbol targetMethod)
+        {
+            if (targetMethod == null) return 0;
+            int count = 0;
+
+            foreach (var project in solution.Projects)
+            {
+                var compilation = project.GetCompilationAsync().Result;
+                foreach (var doc in project.Documents)
+                {
+                    var tree = doc.GetSyntaxTreeAsync().Result;
+                    var model = compilation.GetSemanticModel(tree);
+                    var invocations = tree.GetRoot().DescendantNodes().OfType<InvocationExpressionSyntax>();
+                    foreach (var inv in invocations)
+                    {
+                        var symbol = model.GetSymbolInfo(inv).Symbol as IMethodSymbol;
+                        if (SymbolEqualityComparer.Default.Equals(symbol, targetMethod))
+                            count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        static private int CalculateNPathComplexity(MethodDeclarationSyntax method)
+        {
+            // Простейшая приближённая формула
+            int ifCount = method.DescendantNodes().OfType<IfStatementSyntax>().Count();
+            int loopCount = method.DescendantNodes().OfType<ForStatementSyntax>().Count() +
+                            method.DescendantNodes().OfType<WhileStatementSyntax>().Count();
+            return (int)Math.Pow(2, ifCount + loopCount);
+        }
+
+        static private int GetMaxNestingDepth(BlockSyntax block)
+        {
+            int maxDepth = 0;
+            void Traverse(SyntaxNode node, int depth)
+            {
+                if (node is IfStatementSyntax || node is ForStatementSyntax || node is WhileStatementSyntax || node is DoStatementSyntax)
+                    depth++;
+                maxDepth = Math.Max(maxDepth, depth);
+                foreach (var child in node.ChildNodes())
+                    Traverse(child, depth);
+            }
+            if (block != null) Traverse(block, 0);
+            return maxDepth;
+        }
+        #endregion
 
         private bool ShouldSkipProject(Project project)
         {

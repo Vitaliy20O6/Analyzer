@@ -17,6 +17,7 @@
     <None Remove="Images\project.png" />
     <None Remove="Images\structure.png" />
     <None Remove="Resources\CSharp-Dark.xshd" />
+    <None Remove="Resources\Metrics.txt" />
   </ItemGroup>
 
   <ItemGroup>

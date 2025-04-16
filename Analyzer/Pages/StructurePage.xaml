@@ -18,7 +18,10 @@
         </Grid.ColumnDefinitions>
 
         <!-- TreeView в первой колонке -->
-        <Border Grid.Column="0" Background="#0D1B2A" BorderThickness="0">
+        <Border Grid.Column="0"
+                Background="#0D1B2A"
+                BorderThickness="0"
+                Margin="0 0 0 10">
             <TreeView x:Name="SolutionTreeView"
                     ItemsSource="{Binding RootNodes, Mode=OneWay}"
                     Background="Transparent"
@@ -52,12 +55,14 @@
         <!-- Splitter между колонками -->
         <GridSplitter Grid.Column="1"
                       Width="5"
+                      Margin="0 0 0 10"
                       HorizontalAlignment="Stretch"
-                      Background="Transparent"
+                      Background="Gray"
                       Panel.ZIndex="1"/>
 
         <!-- AvalonEdit в третьей колонке -->
         <avalon:TextEditor Grid.Column="2"
+                           Margin="0 0 10 10"
                            BorderThickness="1"
                            x:Name="CodeEditor"
                            SyntaxHighlighting="C#"

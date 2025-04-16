@@ -1,19 +1,7 @@
 ﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Analyzer
 {
@@ -27,7 +15,7 @@ namespace Analyzer
             InitializeComponent();
         }
 
-        private void Search_Click(object sender, RoutedEventArgs e)
+        private async void Search_Click(object sender, RoutedEventArgs e)
         {
             string filePath = CleanPath(Path.Text);
 
@@ -51,12 +39,39 @@ namespace Analyzer
                 }
             }
 
-            // Переход на другую страницу с переданным путём
-            var nextPage = new AnalyzePage(filePath);
-            NavigationService?.Navigate(nextPage);
+            LoadingBar.Visibility = Visibility.Visible;
+            LoadingInfo.Visibility = Visibility.Visible;
+            Search.IsEnabled = false;
+
+            try
+            {
+                var loader = new Analyzer.src.SolutionLoader(filePath);
+
+                LoadingInfo.Content = "Анализ структуры решения...";
+                await loader.LoadSolution();
+
+                LoadingInfo.Content = "Анализ метрик...";
+                await loader.AnalyzeMetrics();
+
+                LoadingInfo.Content = "";
+
+                // Переход в AnalyzePage с уже загруженным SolutionLoader
+                var analyzePage = new AnalyzePage(loader);
+                NavigationService?.Navigate(analyzePage);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки: {ex.Message}");
+            }
+            finally
+            {
+                LoadingBar.Visibility = Visibility.Collapsed;
+                LoadingInfo.Visibility = Visibility.Collapsed;
+                Search.IsEnabled = true;
+            }
         }
 
-        private string CleanPath(string input)
+        private static string CleanPath(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return string.Empty;

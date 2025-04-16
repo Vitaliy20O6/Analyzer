@@ -16,19 +16,13 @@ namespace Analyzer.Pages
         private readonly SolutionLoader _viewModel;
         private const string DefaultHighlightingResource = "Analyzer.Resources.CSharp-Dark.xshd";
 
-        public StructurePage(string solutionPath)
+        public StructurePage(SolutionLoader loader)
         {
             InitializeComponent();
-            _viewModel = new SolutionLoader(solutionPath);
+            _viewModel = loader;
             DataContext = _viewModel;
 
-            Loaded += OnPageLoaded;
             CodeEditor.SyntaxHighlighting = LoadHighlightingDefinition();
-        }
-
-        private async void OnPageLoaded(object sender, RoutedEventArgs e)
-        {
-            await LoadSolutionAsync();
         }
 
         private static IHighlightingDefinition LoadHighlightingDefinition()

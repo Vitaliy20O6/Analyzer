@@ -1,4 +1,5 @@
 ﻿using Analyzer.Pages;
+using Analyzer.src;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,12 +23,12 @@ namespace Analyzer
     /// </summary>
     public partial class AnalyzePage : Page
     {
-        private string _solutionPath;
+        private readonly SolutionLoader _loader;
 
-        public AnalyzePage(string solutionPath)
+        public AnalyzePage(SolutionLoader loader)
         {
             InitializeComponent();
-            _solutionPath = solutionPath;
+            _loader = loader;
             StructureButton.IsChecked = true;
             MenuNavigate();
         }
@@ -36,23 +37,20 @@ namespace Analyzer
         {
             MenuNavigate();
         }
+
         void MenuNavigate()
         {
             if (StructureButton.IsChecked == true)
             {
-                ContentFrame.Navigate(new StructurePage(_solutionPath));
+                ContentFrame.Navigate(new StructurePage(_loader));
             }
-            else if (MethodsButton.IsChecked == true)
+            else if (MetricsButton.IsChecked == true)
             {
-                //ContentFrame.Navigate(new MethodsPage(_solutionPath));
-            }
-            else if (InfographButton.IsChecked == true)
-            {
-                //ContentFrame.Navigate(new InfographPage(_solutionPath));
+                ContentFrame.Navigate(new MetricsPage(_loader));
             }
             else if (PatternsButton.IsChecked == true)
             {
-                //ContentFrame.Navigate(new PatternsPage(_solutionPath));
+                //ContentFrame.Navigate(new PatternsPage(_loader));
             }
         }
 
