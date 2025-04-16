@@ -10,12 +10,40 @@
       Background="#0D1B2A">
 
     <Grid>
-        <RichTextBox x:Name="MetricsRichTextBox"
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="500" MinWidth="200"/>
+            <ColumnDefinition Width="5"/>
+            <!-- Splitter -->
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <RichTextBox Grid.Column="0"
+                     x:Name="MetricsRichTextBox"
                      Background="LightGray"
                      FontFamily="Consolas"
                      FontSize="14"
                      IsReadOnly="True"
-                     Margin="0 0 10 10"
+                     Margin="0 0 0 10"
+                     HorizontalScrollBarVisibility="Auto"
+                     VerticalScrollBarVisibility="Auto"
+                     />
+
+        <!-- Splitter между колонками -->
+        <GridSplitter Grid.Column="1"
+              Width="5"
+              Margin="0 0 0 10"
+              HorizontalAlignment="Stretch"
+              Background="Gray"
+              Panel.ZIndex="1"/>
+
+        <RichTextBox Grid.Column="2"
+                     x:Name="MetricsInfoRichTextBox"
+                     Background="LightGray"
+                     FontFamily="Consolas"
+                     FontSize="14"
+                     IsReadOnly="True"
+                     Margin="0 0 0 10"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto"
                      />
