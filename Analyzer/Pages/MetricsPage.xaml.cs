@@ -25,8 +25,93 @@ namespace Analyzer.Pages
             SetInfoText();
 
             var metrics = loader.Metrics.Methods;
-            DisplayMetrics(metrics);
+            DisplayMetricsGrouped(metrics);
         }
+
+        private void DisplayMetricsGrouped(List<MethodMetrics> metrics)
+        {
+            MetricsRichTextBox.Document.Blocks.Clear();
+
+            var grouped = metrics
+                .GroupBy(m => new { m.FilePath, m.ClassName })
+                .OrderBy(g => g.Key.FilePath)
+                .ThenBy(g => g.Key.ClassName);
+
+            foreach (var group in grouped)
+            {
+                var paragraph = new Paragraph();
+
+                // Файл
+                paragraph.Inlines.Add(new Run($"Файл: {group.Key.FilePath}\n")
+                {
+                    Foreground = Brushes.DarkRed,
+                    FontWeight = FontWeights.Bold
+                });
+
+                // Класс
+                paragraph.Inlines.Add(new Run($"Класс: {group.Key.ClassName}\n")
+                {
+                    Foreground = Brushes.DarkCyan,
+                    FontWeight = FontWeights.SemiBold
+                });
+
+                foreach (var method in group)
+                {
+                    // Метод
+                    paragraph.Inlines.Add(new Run($"  Метод: {method.MethodName}\n")
+                    {
+                        Foreground = Brushes.Navy,
+                        FontWeight = FontWeights.SemiBold
+                    });
+
+                    // Общая информация
+                    paragraph.Inlines.Add(new Run($"    Строк: {method.LogicalLines}, Параметров: {method.ParameterCount}, Переменных: {method.LocalVariableCount}\n")
+                    {
+                        Foreground = Brushes.Black
+                    });
+
+                    // Сложности
+                    paragraph.Inlines.Add(new Run($"    Сложность: {method.CyclomaticComplexity}, NPath: {method.NPathComplexity}, Вложенность: {method.MaxNestingDepth}\n")
+                    {
+                        Foreground = Brushes.SteelBlue
+                    });
+
+                    // Halstead
+                    paragraph.Inlines.Add(new Run($"    Halstead Volume: {method.HalsteadVolume:F2}, Операторы: {method.OperatorCount}, Операнды: {method.OperandCount}\n")
+                    {
+                        Foreground = Brushes.DarkGreen
+                    });
+
+                    // MI
+                    Brush miColor = method.MaintainabilityIndex switch
+                    {
+                        >= 80 => Brushes.Green,
+                        >= 60 => Brushes.Orange,
+                        _ => Brushes.Red
+                    };
+                    paragraph.Inlines.Add(new Run($"    Maintainability Index: {method.MaintainabilityIndex:F2}\n")
+                    {
+                        Foreground = miColor,
+                        FontWeight = FontWeights.Bold
+                    });
+
+                    // Fan-in/out
+                    paragraph.Inlines.Add(new Run($"    Fan-In: {method.FanIn}, Fan-Out: {method.FanOut}\n\n")
+                    {
+                        Foreground = Brushes.Purple
+                    });
+                }
+
+                // Разделитель только один раз на группу
+                paragraph.Inlines.Add(new Run(new string('-', 27) + "\n")
+                {
+                    Foreground = Brushes.Gray
+                });
+
+                MetricsRichTextBox.Document.Blocks.Add(paragraph);
+            }
+        }
+
 
         void SetInfoText()
         {
@@ -39,7 +124,7 @@ namespace Analyzer.Pages
                 " необходимость рефакторинга (например, объединить в объект).\r\n\r\n✅" +
                 " Количество локальных переменных\r\nЧто это: Сколько переменных объявлено" +
                 " внутри метода.\r\nЗачем нужно: Много переменных может усложнять понимание логики.\r\n\r\n" +
-                "_________________________________________________________________________________\r\n\r\n\t" +
+                "---------------------------\r\n\r\n\t" +
                 "🔄 Сложность и структура\r\n✅ Цикломатическая сложность (Cyclomatic Complexity)\r\n" +
                 "Что это: Количество независимых путей в методе.\r\nКак считается: Базовое значение 1 +" +
                 " количество управляющих конструкций (if, for, while, switch, логические операторы и т. д.).\r\n" +
@@ -50,7 +135,7 @@ namespace Analyzer.Pages
                 "✅ Максимальная глубина вложенности\r\nЧто это: Насколько глубоко вложены блоки кода " +
                 "(например, if в if в for).\r\nЗачем нужно: Глубокая вложенность затрудняет понимание кода." +
                 " Обычно стараются не превышать 3–4 уровня.\r\n\r\n" +
-                "_________________________________________________________________________________\r\n\r\n" +
+                "---------------------------\r\n\r\n" +
                 "\t\U0001f9ee Метрики Halstead\r\nМетрики Халстеда основаны на анализе операторов и" +
                 " операндов в коде.\r\n\r\n✅ Операторы и операнды\r\nОператоры — символы и конструкции," +
                 " выполняющие действия (+, -, =, if, return, for, и т. д.)\r\n\r\nОперанды — имена переменных," +
@@ -59,13 +144,13 @@ namespace Analyzer.Pages
                 " — количество уникальных операторов\r\n\r\nn2 — количество уникальных операндов\r\n" +
                 "Зачем нужно:\r\n\r\nМеньше — проще для понимания\r\n\r\nБольше — более \"нагруженный\"" +
                 " по смыслу код\r\n\r\n" +
-                "_________________________________________________________________________________\r\n\r\n\t" +
+                "---------------------------\r\n\r\n\t" +
                 "📉 Поддерживаемость\r\n✅ Maintainability Index (MI)\r\nЧто это: " +
                 "Индекс удобства сопровождения. Комбинирует длину, Halstead Volume и сложность.\r\nФормула:" +
                 " MI = 171 - 5.2 * log(HalsteadVolume) - 0.23 * CyclomaticComplexity - 16.2 * log(LinesOfCode)\r\n" +
                 "Диапазон значений:\r\n\r\n85 — отличная поддерживаемость\r\n\r\n65–85 — нормальная\r\n\r\n" +
                 "< 65 — низкая, стоит упростить\r\n\r\n" +
-                "_________________________________________________________________________________\r\n\r\n\t" +
+                "---------------------------\r\n\r\n\t" +
                 "🔗 Взаимосвязь методов\r\n✅ Fan-In\r\nЧто это: Сколько других методов вызывает данный метод.\r\n" +
                 "Зачем нужно: Чем выше Fan-In, тем выше важность и переиспользуемость метода." +
                 " Такие методы следует тестировать особенно тщательно.\r\n\r\n✅ Fan-Out\r\nЧто это: " +
@@ -77,82 +162,6 @@ namespace Analyzer.Pages
             paragraph.Inlines.Add(new Run(text));
             MetricsInfoRichTextBox.Document.Blocks.Clear();
             MetricsInfoRichTextBox.Document.Blocks.Add(paragraph);
-        }
-
-        public void DisplayMetrics(List<MethodMetrics> metricsList)
-        {
-            MetricsRichTextBox.Document.Blocks.Clear();
-
-            foreach (var metric in metricsList)
-            {
-                var paragraph = new Paragraph();
-
-                // Заголовок файла
-                paragraph.Inlines.Add(new Run($"Файл: {metric.FilePath}\n")
-                {
-                    Foreground = Brushes.DarkRed,
-                    FontWeight = FontWeights.Bold
-                });
-
-                // Имя класса
-                paragraph.Inlines.Add(new Run($"Класс: {metric.ClassName}\n")
-                {
-                    Foreground = Brushes.DarkCyan,
-                    FontWeight = FontWeights.SemiBold
-                });
-
-                // Имя метода
-                paragraph.Inlines.Add(new Run($"Метод: {metric.MethodName}\n")
-                {
-                    Foreground = Brushes.Navy,
-                    FontWeight = FontWeights.SemiBold
-                });
-
-                // Общая информация
-                paragraph.Inlines.Add(new Run($"  Строк: {metric.LogicalLines}, Параметров: {metric.ParameterCount}, Переменных: {metric.LocalVariableCount}\n")
-                {
-                    Foreground = Brushes.Black
-                });
-
-                // Сложности
-                paragraph.Inlines.Add(new Run($"  Сложность: {metric.CyclomaticComplexity}, NPath: {metric.NPathComplexity}, Вложенность: {metric.MaxNestingDepth}\n")
-                {
-                    Foreground = Brushes.SteelBlue
-                });
-
-                // Halstead
-                paragraph.Inlines.Add(new Run($"  Halstead Volume: {metric.HalsteadVolume:F2}, Операторы: {metric.OperatorCount}, Операнды: {metric.OperandCount}\n")
-                {
-                    Foreground = Brushes.DarkGreen
-                });
-
-                // Maintainability Index
-                Brush miColor = metric.MaintainabilityIndex switch
-                {
-                    >= 80 => Brushes.Green,
-                    >= 60 => Brushes.Orange,
-                    _ => Brushes.Red
-                };
-                paragraph.Inlines.Add(new Run($"  Maintainability Index: {metric.MaintainabilityIndex:F2}\n")
-                {
-                    Foreground = miColor,
-                    FontWeight = FontWeights.Bold
-                });
-
-                // Fan-in/out
-                paragraph.Inlines.Add(new Run($"  Fan-In: {metric.FanIn}, Fan-Out: {metric.FanOut}\n")
-                {
-                    Foreground = Brushes.Purple
-                });
-
-                // Разделитель
-                paragraph.Inlines.Add(new Run(new string('-', 80) + "\n")
-                {
-                    Foreground = Brushes.Gray
-                });
-
-                MetricsRichTextBox.Document.Blocks.Add(paragraph);
-            }
         }
     }
 }
