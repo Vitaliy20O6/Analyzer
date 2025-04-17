@@ -4,12 +4,26 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.MSBuild;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
 namespace Analyzer.src
 {
+    public class DesignPattern
+    {
+        public string PatternName { get; set; }
+        public string Description { get; set; }
+        public string IconPath { get; set; } // Путь к иконке паттерна
+        public string Category { get; set; } // Порождающий, структурный, поведенческий
+
+        // Позже добавим:
+        // public List<PatternClass> Classes { get; set; }
+        // public List<PatternRelation> Relations { get; set; }
+    }
+
+
     public class TreeViewNode : DependencyObject
     {
         public string Name { get; set; }
@@ -35,9 +49,69 @@ namespace Analyzer.src
 
         public MetricsResult Metrics { get; private set; } = new();
 
+        public List<DesignPattern> DetectedPatterns { get; private set; } = new();
+        private PatternAnalyzer _patternAnalyzer;
+        private Compilation _compilation;
+        private Solution _solution;
+
         public SolutionLoader(string solutionPath)
         {
             _solutionPath = solutionPath ?? throw new ArgumentNullException(nameof(solutionPath));
+            DetectedPatterns = new List<DesignPattern>();
+            _patternAnalyzer = new PatternAnalyzer(this); // Инициализация здесь
+        }
+
+        public async Task AnalyzePatternsAsync()
+        {
+            try
+            {
+                if (_patternAnalyzer == null)
+                    throw new InvalidOperationException("Pattern analyzer not initialized");
+
+                DetectedPatterns = await Task.Run(() => _patternAnalyzer.Analyze());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Pattern analysis failed: {ex.Message}");
+                DetectedPatterns = new List<DesignPattern>();
+            }
+        }
+
+        public IEnumerable<SyntaxTree> GetAllSyntaxTrees()
+        {
+            if (_compilation == null)
+            {
+                // Если компиляция еще не создана, создаем ее
+                var project = _solution.Projects.First();
+                _compilation = project.GetCompilationAsync().Result;
+            }
+            return _compilation.SyntaxTrees;
+        }
+
+        public SemanticModel GetSemanticModel(SyntaxTree tree)
+        {
+            if (_compilation == null)
+            {
+                var project = _solution.Projects.First();
+                _compilation = project.GetCompilationAsync().Result;
+            }
+            return _compilation.GetSemanticModel(tree);
+        }
+
+        public IEnumerable<ClassDeclarationSyntax> GetAllClassDeclarations()
+        {
+            return GetAllSyntaxTrees()
+                .SelectMany(tree => tree.GetRoot()
+                    .DescendantNodes()
+                    .OfType<ClassDeclarationSyntax>());
+        }
+
+        public IEnumerable<MethodDeclarationSyntax> GetAllMethodDeclarations()
+        {
+            return GetAllSyntaxTrees()
+                .SelectMany(tree => tree.GetRoot()
+                    .DescendantNodes()
+                    .OfType<MethodDeclarationSyntax>());
         }
 
         public async Task LoadSolution()

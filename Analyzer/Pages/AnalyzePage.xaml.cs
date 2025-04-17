@@ -50,7 +50,7 @@ namespace Analyzer
             }
             else if (PatternsButton.IsChecked == true)
             {
-                //ContentFrame.Navigate(new PatternsPage(_loader));
+                ContentFrame.Navigate(new PatternsPage(_loader));
             }
         }
 

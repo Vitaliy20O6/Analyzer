@@ -1,0 +1,35 @@
+﻿<Page x:Class="Analyzer.Pages.PatternsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:Analyzer.Pages"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="PatternsPage">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Левое окно: список паттернов -->
+        <ListView x:Name="PatternListView" Grid.Column="0" SelectionChanged="PatternListView_SelectionChanged">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding IconPath}" Width="24" Height="24" Margin="4"/>
+                        <TextBlock Text="{Binding PatternName}" VerticalAlignment="Center" Margin="5,0"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Правое окно: схема диаграммы -->
+        <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Canvas x:Name="DiagramCanvas" Background="White" MinWidth="800" MinHeight="600"/>
+        </ScrollViewer>
+    </Grid>
+
+</Page>
