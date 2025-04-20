@@ -15,14 +15,32 @@ namespace Analyzer.src
     {
         public string PatternName { get; set; }
         public string Description { get; set; }
-        public string IconPath { get; set; } // Путь к иконке паттерна
-        public string Category { get; set; } // Порождающий, структурный, поведенческий
+        public string IconPath { get; set; }
+        public string Category { get; set; }
 
-        // Позже добавим:
-        // public List<PatternClass> Classes { get; set; }
-        // public List<PatternRelation> Relations { get; set; }
+        // Новая информация о структуре
+        public List<PatternClass> Classes { get; set; } = new();
+        public List<PatternRelation> Relations { get; set; } = new();
+
+        // Для удобного отображения в UI
+        public string Summary =>
+            $"{Classes.Count} классов, {Relations.Count} связей";
     }
 
+    public class PatternClass
+    {
+        public string Name { get; set; }
+        public string Type { get; set; } // Class, Interface, AbstractClass
+        public List<string> Methods { get; set; } = new();
+        public string FilePath { get; set; }
+    }
+
+    public class PatternRelation
+    {
+        public string Type { get; set; } // Inheritance, Composition, Aggregation, Dependency
+        public string FromClass { get; set; }
+        public string ToClass { get; set; }
+    }
 
     public class TreeViewNode : DependencyObject
     {
@@ -129,6 +147,7 @@ namespace Analyzer.src
                     Console.WriteLine($"Workspace warning: {e.Diagnostic.Message}");
 
                 var solution = await workspace.OpenSolutionAsync(_solutionPath);
+                _solution = solution;
 
                 foreach (var project in solution.Projects)
                 {
