@@ -1,10 +1,9 @@
-﻿using System.Windows;
+﻿using Analyzer.src;
+using Microsoft.CodeAnalysis;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
-using Analyzer.src;
 
 namespace Analyzer.Pages
 {
@@ -39,35 +38,8 @@ namespace Analyzer.Pages
             _loader = loader;
             DataContext = this; // Устанавливаем DataContext для привязок
 
-            LoadPatternsAsync();
-        }
-
-        private async void LoadPatternsAsync()
-        {
-            try
-            {
-                // Показываем индикатор загрузки
-                LoadingIndicator.Visibility = Visibility.Visible;
-                PatternListView.Visibility = Visibility.Collapsed;
-
-                // Загружаем паттерны асинхронно
-                await _loader.AnalyzePatternsAsync();
-                DetectedPatterns = _loader.DetectedPatterns;
-
-                // Обновляем привязку данных
-                PatternListView.ItemsSource = DetectedPatterns;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при анализе паттернов: {ex.Message}",
-                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                // Скрываем индикатор загрузки
-                LoadingIndicator.Visibility = Visibility.Collapsed;
-                PatternListView.Visibility = Visibility.Visible;
-            }
+            DetectedPatterns = _loader.DetectedPatterns;
+            PatternListView.ItemsSource = DetectedPatterns;
         }
 
         private void PatternListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -89,32 +61,46 @@ namespace Analyzer.Pages
         {
             const int startX = 50;
             const int startY = 50;
-            const int stepX = 200;
-            const int stepY = 100;
+            const int stepX = 250;
+            const int stepY = 150;
 
-            // Рисуем классы
+            DiagramCanvas.Children.Clear();
+
+            // Рисуем все классы
             for (int i = 0; i < pattern.Classes.Count; i++)
             {
                 var cls = pattern.Classes[i];
                 int x = startX + (i % 2) * stepX;
                 int y = startY + (i / 2) * stepY;
-
                 DrawClass(cls, x, y);
             }
 
-            // Рисуем связи
+            // Рисуем все связи
             foreach (var relation in pattern.Relations)
             {
                 var fromClass = pattern.Classes.FirstOrDefault(c => c.Name == relation.FromClass);
                 var toClass = pattern.Classes.FirstOrDefault(c => c.Name == relation.ToClass);
-
                 if (fromClass != null && toClass != null)
                 {
                     DrawRelation(relation, fromClass, toClass);
                 }
             }
-        }
 
+            // Добавляем статистику
+            if (!pattern.Classes.Any())
+            {
+                var text = new TextBlock
+                {
+                    Text = $"Классы не обнаружены\nСвязей: {pattern.Relations.Count}",
+                    Foreground = Brushes.Gray,
+                    FontSize = 16,
+                    TextAlignment = TextAlignment.Center
+                };
+                Canvas.SetLeft(text, startX);
+                Canvas.SetTop(text, startY);
+                DiagramCanvas.Children.Add(text);
+            }
+        }
         private void DrawClass(PatternClass cls, int x, int y)
         {
             // Создаем прямоугольник для класса
@@ -192,6 +178,19 @@ namespace Analyzer.Pages
                 Canvas.SetLeft(arrow, toX);
                 Canvas.SetTop(arrow, toY);
                 DiagramCanvas.Children.Add(arrow);
+            }
+
+            // Добавьте разные стили для разных типов связей
+            switch (relation.Type)
+            {
+                case "Creates":
+                    line.StrokeDashArray = new DoubleCollection(new[] { 4.0, 2.0 });
+                    line.Stroke = Brushes.DarkGreen;
+                    break;
+
+                case "Implements":
+                    line.Stroke = Brushes.Blue;
+                    break;
             }
 
             DiagramCanvas.Children.Add(line);

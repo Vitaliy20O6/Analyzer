@@ -23,17 +23,18 @@
 
         <!-- Список паттернов -->
         <ListView x:Name="PatternListView"
-              Grid.Row="0"
-              ItemsSource="{Binding DetectedPatterns}"
-              SelectedItem="{Binding SelectedPattern, Mode=TwoWay}"
-              SelectionChanged="PatternListView_SelectionChanged">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Паттерн" DisplayMemberBinding="{Binding PatternName}"/>
-                    <GridViewColumn Header="Описание" DisplayMemberBinding="{Binding Description}"/>
-                    <GridViewColumn Header="Статистика" DisplayMemberBinding="{Binding Summary}"/>
-                </GridView>
-            </ListView.View>
+          ItemsSource="{Binding DetectedPatterns}"
+          SelectedItem="{Binding SelectedPattern, Mode=TwoWay}"
+          SelectionChanged="PatternListView_SelectionChanged">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding PatternName}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Description}"/>
+                        <TextBlock Text="{Binding Summary}" Foreground="Gray"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
         </ListView>
 
         <!-- Область визуализации -->

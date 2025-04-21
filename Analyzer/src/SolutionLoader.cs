@@ -13,18 +13,25 @@ namespace Analyzer.src
 {
     public class DesignPattern
     {
+        // Добавьте уникальный идентификатор паттерна
+        public Guid Id { get; } = Guid.NewGuid();
+
+        // Остальные свойства остаются без изменений
         public string PatternName { get; set; }
         public string Description { get; set; }
         public string IconPath { get; set; }
         public string Category { get; set; }
-
-        // Новая информация о структуре
         public List<PatternClass> Classes { get; set; } = new();
         public List<PatternRelation> Relations { get; set; } = new();
 
-        // Для удобного отображения в UI
-        public string Summary =>
-            $"{Classes.Count} классов, {Relations.Count} связей";
+        // Для группировки по имени паттерна и классам
+        public override bool Equals(object obj) =>
+            obj is DesignPattern other &&
+            PatternName == other.PatternName &&
+            Classes.Select(c => c.Name).SequenceEqual(other.Classes.Select(c => c.Name));
+
+        public override int GetHashCode() =>
+            HashCode.Combine(PatternName, string.Join(",", Classes.Select(c => c.Name)));
     }
 
     public class PatternClass

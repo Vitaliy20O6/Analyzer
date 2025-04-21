@@ -51,7 +51,7 @@ namespace Analyzer
                 await loader.LoadSolution();
 
                 LoadingInfo.Content = "Анализ метрик...";
-                await loader.AnalyzeMetrics();
+                //await loader.AnalyzeMetrics();
 
                 LoadingInfo.Content = "Поиск паттернов...";
                 await loader.AnalyzePatternsAsync();

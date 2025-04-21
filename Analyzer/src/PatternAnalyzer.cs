@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Analyzer.src
@@ -38,7 +39,11 @@ namespace Analyzer.src
                     }
                 });
 
-                return patterns.Distinct().ToList();
+                // Группировка по уникальным паттернам
+                return patterns
+                    .GroupBy(p => p.GetHashCode())
+                    .Select(g => g.First())
+                    .ToList();
             }
             catch
             {
@@ -61,11 +66,61 @@ namespace Analyzer.src
 
         private void AnalyzeFactory(CompilationUnitSyntax root, SemanticModel semanticModel, ConcurrentBag<DesignPattern> patterns)
         {
-            foreach (var method in root.DescendantNodes().OfType<MethodDeclarationSyntax>())
+            var factoryMethods = root.DescendantNodes()
+                .OfType<MethodDeclarationSyntax>()
+                .Where(m => IsFactoryMethod(m, semanticModel));
+
+            foreach (var method in factoryMethods)
             {
-                if (IsFactoryMethod(method, semanticModel))
+                var factoryClass = method.Parent as ClassDeclarationSyntax;
+                if (factoryClass == null) continue;
+
+                // Ищем возвращаемый тип
+                var returnType = semanticModel.GetTypeInfo(method.ReturnType).Type;
+                if (returnType == null) continue;
+
+                // Создаем или находим существующий паттерн
+                var pattern = patterns.FirstOrDefault(p =>
+                    p.PatternName == "Factory Method" &&
+                    p.Classes.Any(c => c.Name == factoryClass.Identifier.Text));
+
+                if (pattern == null)
                 {
-                    patterns.Add(CreatePattern("Factory Method", method.Parent as ClassDeclarationSyntax));
+                    pattern = new DesignPattern
+                    {
+                        PatternName = "Factory Method",
+                        Description = GetPatternDescription("Factory Method"),
+                        Category = GetPatternCategory("Factory Method"),
+                        IconPath = "/Images/Patterns/factorymethod.png"
+                    };
+                    pattern.Classes.Add(new PatternClass
+                    {
+                        Name = factoryClass.Identifier.Text,
+                        Type = "Factory",
+                        Methods = { method.Identifier.Text }
+                    });
+                    patterns.Add(pattern);
+                }
+
+                // Добавляем продукт
+                var productClass = root.DescendantNodes()
+                    .OfType<ClassDeclarationSyntax>()
+                    .FirstOrDefault(c => c.Identifier.Text == returnType.Name);
+
+                if (productClass != null && !pattern.Classes.Any(c => c.Name == productClass.Identifier.Text))
+                {
+                    pattern.Classes.Add(new PatternClass
+                    {
+                        Name = productClass.Identifier.Text,
+                        Type = "Product"
+                    });
+
+                    pattern.Relations.Add(new PatternRelation
+                    {
+                        Type = "Creates",
+                        FromClass = factoryClass.Identifier.Text,
+                        ToClass = productClass.Identifier.Text
+                    });
                 }
             }
         }
@@ -118,15 +173,29 @@ namespace Analyzer.src
 
         private bool IsFactoryMethod(MethodDeclarationSyntax method, SemanticModel semanticModel)
         {
+            // Убрали проверку на ParameterList.Parameters.Count == 0
             var returnType = semanticModel.GetTypeInfo(method.ReturnType).Type;
             return method.Identifier.Text.StartsWith("Create") &&
-                   (returnType?.TypeKind == TypeKind.Interface || returnType?.IsAbstract == true);
+                   (returnType?.TypeKind == TypeKind.Interface ||
+                    returnType?.IsAbstract == true);
         }
         #endregion
 
         #region Helpers
         private DesignPattern CreatePattern(string name, ClassDeclarationSyntax cls)
         {
+            // Защита от null
+            if (cls == null)
+            {
+                return new DesignPattern
+                {
+                    PatternName = name,
+                    Description = "Некорректный паттерн: класс не определён",
+                    Category = "Ошибка",
+                    IconPath = "/Images/error.png"
+                };
+            }
+
             return new DesignPattern
             {
                 PatternName = name,
