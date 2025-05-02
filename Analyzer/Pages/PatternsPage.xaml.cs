@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -9,198 +10,87 @@ namespace Analyzer.Pages
 {
     public partial class PatternsPage : Page
     {
-        private readonly SolutionLoader _loader;
-        public List<DesignPattern> DetectedPatterns { get; private set; }
-        private DesignPattern _selectedPattern;
-        public DesignPattern SelectedPattern
-        {
-            get => _selectedPattern;
-            set
-            {
-                if (_selectedPattern != value)
-                {
-                    _selectedPattern = value;
-                    OnPropertyChanged(nameof(SelectedPattern));
-
-                    // Обновляем диаграмму при изменении выбора
-                    DiagramCanvas.Children.Clear();
-                    if (_selectedPattern != null)
-                    {
-                        DrawPatternDiagram(_selectedPattern);
-                    }
-                }
-            }
-        }
-
         public PatternsPage(SolutionLoader loader)
         {
             InitializeComponent();
-            _loader = loader;
-            DataContext = this; // Устанавливаем DataContext для привязок
-
-            DetectedPatterns = _loader.DetectedPatterns;
-            PatternListView.ItemsSource = DetectedPatterns;
+            PrintResults(loader.Result);
         }
 
-        private void PatternListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        void PrintResults(AnalysisResult result)
         {
-            if (PatternListView.SelectedItem is DesignPattern selectedPattern)
+            // Получаем документ
+            FlowDocument flowDoc = new FlowDocument();
+            PatternsRichTextBox.Document = flowDoc;
+
+            // Создаем параграф
+            Paragraph paragraph = new Paragraph();
+            flowDoc.Blocks.Add(paragraph);
+
+            // Новые контрастные цвета
+            var projectColor = Brushes.DodgerBlue; 
+            var patternColor = Brushes.Red;       
+            var detailColor = Brushes.Black;  
+            var separatorColor = Brushes.DimGray;  
+            var highlightColor = Brushes.Green;
+
+            // Настройки шрифта для лучшей читаемости
+            double mainFontSize = 14;
+            double headerFontSize = 16;
+
+            foreach (var project in result.ProjectPatterns)
             {
-                SelectedPattern = selectedPattern;
-                OnPropertyChanged(nameof(SelectedPattern)); // Уведомляем об изменении
-
-                // Очищаем область визуализации
-                DiagramCanvas.Children.Clear();
-
-                // Рисуем схему паттерна
-                DrawPatternDiagram(selectedPattern);
-            }
-        }
-
-        private void DrawPatternDiagram(DesignPattern pattern)
-        {
-            const int startX = 50;
-            const int startY = 50;
-            const int stepX = 250;
-            const int stepY = 150;
-
-            DiagramCanvas.Children.Clear();
-
-            // Рисуем все классы
-            for (int i = 0; i < pattern.Classes.Count; i++)
-            {
-                var cls = pattern.Classes[i];
-                int x = startX + (i % 2) * stepX;
-                int y = startY + (i / 2) * stepY;
-                DrawClass(cls, x, y);
-            }
-
-            // Рисуем все связи
-            foreach (var relation in pattern.Relations)
-            {
-                var fromClass = pattern.Classes.FirstOrDefault(c => c.Name == relation.FromClass);
-                var toClass = pattern.Classes.FirstOrDefault(c => c.Name == relation.ToClass);
-                if (fromClass != null && toClass != null)
+                // Вывод разделителя проекта
+                paragraph.Inlines.Add(new Run("\n" + new string('=', 50) + "\n")
                 {
-                    DrawRelation(relation, fromClass, toClass);
+                    Foreground = separatorColor,
+                    FontWeight = FontWeights.Bold,
+                    FontSize = mainFontSize
+                });
+
+                // Вывод названия проекта
+                paragraph.Inlines.Add(new Run($"=== Проект: {project.Key} ===\n")
+                {
+                    Foreground = projectColor,
+                    FontWeight = FontWeights.Bold,
+                    FontSize = headerFontSize
+                });
+
+                paragraph.Inlines.Add(new Run(new string('=', 50) + "\n")
+                {
+                    Foreground = separatorColor,
+                    FontWeight = FontWeights.Bold,
+                    FontSize = mainFontSize
+                });
+
+                foreach (var pattern in project.Value)
+                {
+                    // Вывод названия паттерна
+                    paragraph.Inlines.Add(new Run($"\n{pattern.Name}:\n")
+                    {
+                        Foreground = patternColor,
+                        FontWeight = FontWeights.Bold,
+                        FontSize = mainFontSize,
+                    });
+
+                    // Вывод деталей паттерна
+                    foreach (var detail in pattern.Details)
+                    {
+                        paragraph.Inlines.Add(new Run($"   {detail.Key}: ")
+                        {
+                            Foreground = highlightColor,
+                            FontWeight = FontWeights.Bold,
+                            FontSize = mainFontSize
+                        });
+
+                        paragraph.Inlines.Add(new Run($"{detail.Value}\n")
+                        {
+                            Foreground = detailColor,
+                            FontWeight = FontWeights.Normal,
+                            FontSize = mainFontSize
+                        });
+                    }
                 }
             }
-
-            // Добавляем статистику
-            if (!pattern.Classes.Any())
-            {
-                var text = new TextBlock
-                {
-                    Text = $"Классы не обнаружены\nСвязей: {pattern.Relations.Count}",
-                    Foreground = Brushes.Gray,
-                    FontSize = 16,
-                    TextAlignment = TextAlignment.Center
-                };
-                Canvas.SetLeft(text, startX);
-                Canvas.SetTop(text, startY);
-                DiagramCanvas.Children.Add(text);
-            }
-        }
-        private void DrawClass(PatternClass cls, int x, int y)
-        {
-            // Создаем прямоугольник для класса
-            var rect = new Rectangle
-            {
-                Width = 150,
-                Height = 60,
-                Fill = Brushes.LightBlue,
-                Stroke = Brushes.Black,
-                StrokeThickness = 1,
-                Tag = cls // Сохраняем ссылку на класс
-            };
-
-            Canvas.SetLeft(rect, x);
-            Canvas.SetTop(rect, y);
-            DiagramCanvas.Children.Add(rect);
-
-            // Добавляем текст с именем класса
-            var text = new TextBlock
-            {
-                Text = cls.Name,
-                TextWrapping = TextWrapping.Wrap,
-                Width = 140,
-                TextAlignment = TextAlignment.Center,
-                FontWeight = FontWeights.Bold
-            };
-
-            Canvas.SetLeft(text, x + 5);
-            Canvas.SetTop(text, y + 20);
-            DiagramCanvas.Children.Add(text);
-        }
-
-        private void DrawRelation(PatternRelation relation, PatternClass from, PatternClass to)
-        {
-            // Находим элементы на canvas по тегам
-            var fromRect = DiagramCanvas.Children
-                .OfType<Rectangle>()
-                .FirstOrDefault(r => r.Tag == from);
-
-            var toRect = DiagramCanvas.Children
-                .OfType<Rectangle>()
-                .FirstOrDefault(r => r.Tag == to);
-
-            if (fromRect == null || toRect == null) return;
-
-            // Вычисляем координаты
-            double fromX = Canvas.GetLeft(fromRect) + fromRect.Width / 2;
-            double fromY = Canvas.GetTop(fromRect) + fromRect.Height;
-            double toX = Canvas.GetLeft(toRect) + toRect.Width / 2;
-            double toY = Canvas.GetTop(toRect);
-
-            // Создаем линию
-            var line = new Line
-            {
-                X1 = fromX,
-                Y1 = fromY,
-                X2 = toX,
-                Y2 = toY,
-                Stroke = Brushes.Black,
-                StrokeThickness = 1
-            };
-
-            // Добавляем стрелку для некоторых типов связей
-            if (relation.Type == "Inheritance" || relation.Type == "Creation")
-            {
-                line.StrokeThickness = 2;
-
-                // Треугольник для стрелки
-                var arrow = new Polygon
-                {
-                    Points = new PointCollection(new[] { new Point(-5, -10), new Point(5, -10), new Point(0, 0) }),
-                    Fill = Brushes.Black
-                };
-
-                Canvas.SetLeft(arrow, toX);
-                Canvas.SetTop(arrow, toY);
-                DiagramCanvas.Children.Add(arrow);
-            }
-
-            // Добавьте разные стили для разных типов связей
-            switch (relation.Type)
-            {
-                case "Creates":
-                    line.StrokeDashArray = new DoubleCollection(new[] { 4.0, 2.0 });
-                    line.Stroke = Brushes.DarkGreen;
-                    break;
-
-                case "Implements":
-                    line.Stroke = Brushes.Blue;
-                    break;
-            }
-
-            DiagramCanvas.Children.Add(line);
-        }
-
-        // Реализация INotifyPropertyChanged для привязки данных
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
         }
     }
 }

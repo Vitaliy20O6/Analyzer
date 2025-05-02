@@ -9,38 +9,14 @@
       Title="PatternsPage">
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <!-- Индикатор загрузки -->
-        <ProgressBar x:Name="LoadingIndicator" 
-                 Grid.RowSpan="2"
-                 Height="20"
-                 IsIndeterminate="True"
-                 Visibility="Collapsed"/>
-
-        <!-- Список паттернов -->
-        <ListView x:Name="PatternListView"
-          ItemsSource="{Binding DetectedPatterns}"
-          SelectedItem="{Binding SelectedPattern, Mode=TwoWay}"
-          SelectionChanged="PatternListView_SelectionChanged">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel>
-                        <TextBlock Text="{Binding PatternName}" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding Description}"/>
-                        <TextBlock Text="{Binding Summary}" Foreground="Gray"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-
-        <!-- Область визуализации -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-            <Canvas x:Name="DiagramCanvas" Background="White" Width="1000" Height="1000"/>
-        </ScrollViewer>
+        <RichTextBox x:Name="PatternsRichTextBox"
+                     Background="LightGray"
+                     FontFamily="Consolas"
+                     FontSize="14"
+                     IsReadOnly="True"
+                     Margin="0 0 10 10"
+                     HorizontalScrollBarVisibility="Auto"
+                     VerticalScrollBarVisibility="Auto"/>
     </Grid>
 
 </Page>

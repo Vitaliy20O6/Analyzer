@@ -11,44 +11,6 @@ using System.Windows.Media.Imaging;
 
 namespace Analyzer.src
 {
-    public class DesignPattern
-    {
-        // Добавьте уникальный идентификатор паттерна
-        public Guid Id { get; } = Guid.NewGuid();
-
-        // Остальные свойства остаются без изменений
-        public string PatternName { get; set; }
-        public string Description { get; set; }
-        public string IconPath { get; set; }
-        public string Category { get; set; }
-        public List<PatternClass> Classes { get; set; } = new();
-        public List<PatternRelation> Relations { get; set; } = new();
-
-        // Для группировки по имени паттерна и классам
-        public override bool Equals(object obj) =>
-            obj is DesignPattern other &&
-            PatternName == other.PatternName &&
-            Classes.Select(c => c.Name).SequenceEqual(other.Classes.Select(c => c.Name));
-
-        public override int GetHashCode() =>
-            HashCode.Combine(PatternName, string.Join(",", Classes.Select(c => c.Name)));
-    }
-
-    public class PatternClass
-    {
-        public string Name { get; set; }
-        public string Type { get; set; } // Class, Interface, AbstractClass
-        public List<string> Methods { get; set; } = new();
-        public string FilePath { get; set; }
-    }
-
-    public class PatternRelation
-    {
-        public string Type { get; set; } // Inheritance, Composition, Aggregation, Dependency
-        public string FromClass { get; set; }
-        public string ToClass { get; set; }
-    }
-
     public class TreeViewNode : DependencyObject
     {
         public string Name { get; set; }
@@ -73,33 +35,40 @@ namespace Analyzer.src
         private readonly string _solutionPath;
 
         public MetricsResult Metrics { get; private set; } = new();
+        public AnalysisResult Result { get; private set; } = new();
 
-        public List<DesignPattern> DetectedPatterns { get; private set; } = new();
-        private PatternAnalyzer _patternAnalyzer;
         private Compilation _compilation;
         private Solution _solution;
 
         public SolutionLoader(string solutionPath)
         {
             _solutionPath = solutionPath ?? throw new ArgumentNullException(nameof(solutionPath));
-            DetectedPatterns = new List<DesignPattern>();
-            _patternAnalyzer = new PatternAnalyzer(this); // Инициализация здесь
+            Result = new AnalysisResult(); // Создаем объект для результатов
         }
 
         public async Task AnalyzePatternsAsync()
         {
-            try
+            foreach (var project in _solution.Projects)
             {
-                if (_patternAnalyzer == null)
-                    throw new InvalidOperationException("Pattern analyzer not initialized");
+                var compilation = await project.GetCompilationAsync();
+                AnalizeAllPatterns(project.Name, compilation, Result); // Передаем результат
+            }
+        }
 
-                DetectedPatterns = await Task.Run(() => _patternAnalyzer.Analyze());
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Pattern analysis failed: {ex.Message}");
-                DetectedPatterns = new List<DesignPattern>();
-            }
+        private static void AnalizeAllPatterns(string projectName, Microsoft.CodeAnalysis.Compilation compilation, AnalysisResult result)
+        {
+            PatternAnalyzer.AnalyzeFactoryMethods(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeAbstractFactories(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeAdapters(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeBridges(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeSingletons(projectName, compilation, result);
+            PatternAnalyzer.AnalyzePrototypes(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeMementos(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeProxies(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeStates(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeStrategies(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeTemplateMethods(projectName, compilation, result);
+            PatternAnalyzer.AnalyzeVisitors(projectName, compilation, result);
         }
 
         public IEnumerable<SyntaxTree> GetAllSyntaxTrees()
